@@ -1,5 +1,11 @@
 # Kế hoạch nâng cấp ứng dụng Quản lý Tài liệu lên Cloud
 
+> **Quyết định hiện hành (2026-10-13):** kế hoạch này mô tả phương án Firebase
+> Storage cũ và đã bị thay thế. Dự án hiện giữ Firebase Authentication nhưng
+> dùng private Supabase Storage; không tạo Firebase Storage/rules, Firebase
+> Functions cho tệp hoặc yêu cầu Blaze billing. Xem
+> [`../docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md).
+
 **Phạm vi tài liệu:** kế hoạch được điều chỉnh theo mã nguồn thật trong `mm/`; đây không phải checklist thiết lập cho một dự án Flutter mới.  
 **Ngày cập nhật:** 2026-10-13  
 **Trạng thái tổng thể:** đang thực hiện nền tảng Firebase Auth/Supabase; chưa có cấu hình Firebase project chạy được, chưa có schema/RLS hoặc tích hợp Storage.  

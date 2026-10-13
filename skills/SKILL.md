@@ -1,19 +1,24 @@
 ---
 name: flutter-cloud-document-management
-description: Upgrade an existing Flutter document management application to meet academic requirements using Firebase Google Authentication, Firebase Storage, Supabase PostgreSQL, document sharing, Row Level Security, and multi-account testing. Always inspect the existing project before modifying code.
+description: Upgrade an existing Flutter document management application with Firebase Google Authentication, Supabase PostgreSQL and Storage, document sharing, RLS, and multi-account testing. Always inspect the existing project before modifying code.
 ---
 
 # Skill: Flutter Cloud Document Management
+
+> Project-specific decision (2026-10-13): the user selected private Supabase
+> Storage instead of Firebase Storage. Apply this decision throughout this
+> project; Firebase Storage, Firebase Storage Rules, Firebase Callable
+> Functions for file URLs, and Firebase Blaze billing are out of scope.
 
 ## 1. Mission
 
 Upgrade the user's existing Flutter document management application to meet these requirements:
 
 1. Google sign-in through Firebase Authentication.
-2. Physical file storage through Firebase Storage.
+2. Physical file storage through private Supabase Storage.
 3. Supabase PostgreSQL tables for users, documents, and sharing permissions.
 4. Document search, metadata updates, and secure sharing.
-5. Supabase Row Level Security (RLS) and Firebase Storage Rules.
+5. Supabase Row Level Security (RLS) and Supabase Storage Policies.
 6. Functional and security testing with at least three independent user accounts.
 7. Evidence and documentation suitable for academic submission.
 
@@ -35,7 +40,8 @@ This is an upgrade task, NOT a greenfield project.
 - Never put Supabase service_role credentials in Flutter or any client-side bundle.
 - Never rely on frontend visibility or disabled buttons as an authorization mechanism.
 - Never treat Firebase authentication as automatically establishing a trusted Supabase identity.
-- Never assume Supabase RLS protects Firebase Storage objects.
+- Never assume database RLS alone protects Supabase Storage objects; configure
+  `storage.objects` policies separately.
 - Never report completion while a required security or testing item remains unverified.
 
 ## 3. Phase 0: Inspect the existing project
@@ -87,10 +93,10 @@ Do not introduce a new state-management library solely for this assignment.
 Define the responsibilities of:
 
 - Firebase Authentication: identity verification and session management.
-- Firebase Storage: physical file objects.
+- Supabase Storage: private physical file objects.
 - Supabase PostgreSQL: document metadata, users, and permissions.
 - Supabase RLS: database authorization.
-- Firebase Storage Rules: file-level authorization.
+- Supabase Storage policies: file-level authorization.
 - A trusted authentication bridge: establishing a verified Firebase identity for Supabase requests.
 
 Choose the authentication bridge only after inspecting the current project and checking compatibility with the selected Supabase configuration.
@@ -167,7 +173,7 @@ Define how user creation, document creation, permission updates, and deletion re
 
 Use migrations rather than relying only on manual dashboard changes.
 
-## 7. Phase 4: Firebase Storage integration
+## 7. Phase 4: Supabase Storage integration
 
 Implement the existing project's equivalent of a storage service.
 
@@ -179,7 +185,7 @@ Required operations:
 - Obtain file metadata where needed.
 - Handle upload/download failures and cancellation where supported.
 
-Storage rules:
+Storage policies:
 
 - Use predictable object paths that include an ownership identifier.
 - Do not use a predictable path as a substitute for authorization.
@@ -187,9 +193,12 @@ Storage rules:
 - Prefer private storage objects over permanently public URLs.
 - Avoid persisting expiring download URLs as the only source of truth.
 - Verify the caller's identity and authorization before permitting access.
-- Do not assume Supabase RLS automatically applies to Firebase Storage.
+- Do not assume PostgreSQL RLS automatically applies to Supabase Storage;
+  configure and test `storage.objects` policies.
 
-If shared-file access requires a backend authorization check, implement or document that trusted flow explicitly.
+For shared-file reads, use Supabase Storage policies to check the current
+verified identity and document permission. Use a trusted backend only if the
+Firebase token cannot be verified by the Supabase Third-Party Auth integration.
 
 Handle failures between storage and database operations. For example, if upload succeeds but metadata insertion fails, define a cleanup or retry strategy so orphaned files can be detected and recovered.
 
@@ -241,7 +250,7 @@ Do not permit users to grant themselves access or change document ownership by d
 
 Prevent unauthorized permission escalation and duplicate permission records.
 
-## 10. Phase 7: Supabase RLS and Firebase Storage Rules
+## 10. Phase 7: Supabase RLS and Storage policies
 
 RLS is mandatory.
 
@@ -259,11 +268,11 @@ Do not copy policies that assume auth.uid() automatically returns the Firebase U
 
 If Firebase JWT verification is performed by a backend, ensure that the backend verifies the signature, issuer, audience, expiration, and required identity claims.
 
-Configure Firebase Storage Rules independently:
+Configure Supabase Storage policies independently from metadata-table RLS:
 
 - Owners can access their own files.
 - Authorized viewers and editors can read shared files.
-- Only authorized users can perform writes or deletes.
+- Only owners can upload, replace, or delete files.
 - File paths, document ownership, and sharing permissions cannot be forged by a client.
 - Enforce reasonable file-size and content-type restrictions where appropriate.
 
@@ -299,7 +308,9 @@ Required test scenarios:
 
 Add further tests for owner access, editor access, missing files, expired sessions, and invalid inputs.
 
-Use the actual configured authentication flow for security tests. Do not substitute mocked authorization tests for end-to-end RLS and Storage Rules verification.
+Use the actual configured authentication flow for security tests. Do not
+substitute mocked authorization tests for end-to-end database RLS and Storage
+policy verification.
 
 Record each test's:
 
@@ -372,12 +383,12 @@ The project is ready for submission only when:
 
 - Google authentication works on the required platform.
 - Supabase contains the required relational tables and constraints.
-- File objects are stored in Firebase Storage.
+- File objects are stored in private Supabase Storage.
 - Metadata and file references remain consistent.
 - Search and metadata updates work.
 - Sharing and revocation work.
 - RLS is enabled and verified.
-- Firebase Storage Rules are configured and verified.
+- Supabase Storage policies are configured and verified.
 - Three independent accounts have been tested.
 - Unauthorized access attempts are denied.
 - Required tests and documentation are available.

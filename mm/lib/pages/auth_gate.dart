@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/cloud_document_service.dart';
 import 'signed_in_page.dart';
 import 'sign_in_page.dart';
 
@@ -9,9 +10,11 @@ class AuthGate extends StatelessWidget {
   const AuthGate({
     super.key,
     required this.authService,
+    required this.cloudDocumentService,
   });
 
   final AuthService authService;
+  final CloudDocumentService cloudDocumentService;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +47,7 @@ class AuthGate extends StatelessWidget {
         return SignedInPage(
           user: snapshot.data!,
           authService: authService,
+          cloudDocumentService: cloudDocumentService,
         );
       },
     );

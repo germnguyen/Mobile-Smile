@@ -1,10 +1,15 @@
 # Project Audit — Quản lý Tài liệu
 
+> **Trạng thái cập nhật 2026-10-13:** Phần audit ban đầu bên dưới là lịch sử
+> trước khi triển khai. Quyết định kiến trúc mới của người dùng thay Firebase
+> Storage bằng Supabase Storage. Tình trạng mã nguồn và cloud hiện tại được ghi
+> ở mục “Cập nhật kiến trúc” cuối tài liệu.
+
 **Ngày audit:** 2026-10-13  
 **Phạm vi:** mã nguồn hiện có trong `mm/`, cấu hình nền tảng, dependency lockfile, tests và nội dung skill `skills/SKILL.md`.  
 **Giai đoạn:** chỉ audit; chưa sửa mã ứng dụng, cấu hình Firebase/Supabase hoặc dữ liệu. Hai tài liệu audit/kế hoạch này là đầu ra được yêu cầu.
 
-## 1. Kết luận điều hành
+## 1. Kết luận điều hành (audit ban đầu)
 
 Đây hiện là ứng dụng Flutter quản lý **metadata tài liệu cục bộ** bằng Drift/SQLite. Có bằng chứng trong mã cho thao tác thêm, xem, sửa, xóa, tìm kiếm theo tên/mô tả/môn học và lọc theo loại. Bộ test hiện tại chạy đạt 18 tests; `flutter analyze` không sạch: 7 vấn đề (1 info, 6 warning).
 
@@ -197,4 +202,120 @@ Người dùng cung cấp phạm vi yêu cầu: Google Sign-In qua Firebase Auth
 
 **Tích hợp Supabase:** SDK `supabase_flutter 2.18.3` có callback `accessToken` dùng cho third-party auth; app hiện trả Firebase `getIdToken()` ở đó. Cấu hình provider trong Supabase Dashboard, claims/token thật, JWT verification và policy UID mapping chưa được xác minh. Không có truy vấn Postgres nào được triển khai ở bước này.
 
-**Kiểm tra:** sau khi thêm Auth, Problems tool báo không có compile errors trong các file Auth được kiểm tra và `flutter test` đạt 18/18. `flutter analyze` còn 6 issue (1 info, 5 warning; giảm một warning do bỏ import thừa trong file đã sửa). Android APK debug build thành công và được cài lên Pixel_8_2, nhưng app dừng ngay khi khởi tạo Firebase: `Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly.` Thiết bị/emulator hoạt động, nhưng runtime Firebase chưa cấu hình. `flutter run` vì vậy không đạt trạng thái sẵn sàng sử dụng. Chưa chạy đăng nhập trên thiết bị, cloud calls, RLS/Storage test hoặc test ba tài khoản.
+**Kiểm tra tại thời điểm Auth:** sau khi thêm Auth, Problems tool báo không có compile errors trong các file Auth được kiểm tra và `flutter test` đạt 18/18. `flutter analyze` còn 6 issue (1 info, 5 warning; giảm một warning do bỏ import thừa trong file đã sửa). Android APK debug build thành công và được cài lên Pixel_8_2, nhưng app dừng ngay khi khởi tạo Firebase: `Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly.` Thiết bị/emulator hoạt động, nhưng runtime Firebase chưa cấu hình. `flutter run` vì vậy không đạt trạng thái sẵn sàng sử dụng. Chưa chạy đăng nhập trên thiết bị, cloud calls, RLS/Storage test hoặc test ba tài khoản.
+
+## 12. Tiến độ triển khai cloud — 2026-10-13
+
+Người dùng yêu cầu tiếp tục checklist và chọn phương án **Firebase Storage riêng tư + Firebase Callable Function xác minh quyền Supabase trước khi cấp signed URL ngắn hạn**. Hướng này giữ Firebase Storage cho binary, Supabase làm metadata/ACL; signed URL là bearer credential, hết hạn sau 5 phút và không được lưu làm metadata lâu dài.
+
+### Đã thêm trong workspace
+
+- `mm/lib/models/cloud_document.dart`: DTO cloud với owner, metadata, Storage path và role.
+- `mm/lib/services/cloud_document_service.dart`: upsert profile, tìm kiếm qua RPC, CRUD metadata, upload/replace/delete file, chia sẻ/thu hồi quyền và gọi Function lấy URL tải có ủy quyền.
+- `mm/lib/pages/signed_in_page.dart`: thay trang placeholder sau đăng nhập bằng danh sách cloud, tìm kiếm/lọc và khởi tạo profile.
+- `mm/lib/pages/cloud_document_form_page.dart`, `cloud_document_detail_page.dart`: form metadata/file, tải tệp, chia sẻ và quản lý/revoke quyền.
+- `mm/lib/config/app_dependencies.dart`, `auth_gate.dart`, `main.dart`: nối cloud service vào luồng auth hiện tại.
+- `mm/supabase/migrations/20261013223000_initial_document_schema.sql`: schema/RLS và RPC tìm kiếm, liệt kê quyền, chia sẻ/thu hồi; đã áp dụng vào project dev/test sau xác nhận của người dùng.
+- `mm/storage.rules`: chỉ chủ sở hữu được truy cập trực tiếp object; người được chia sẻ phải qua backend.
+- `mm/functions/src/index.ts`: Callable Function xác minh Firebase caller, đọc permission theo UID trong Supabase bằng secret server-side và cấp signed URL 5 phút.
+- `mm/firebase.json`, `mm/functions/package.json`, `mm/functions/tsconfig.json`, lockfile: cấu hình nguồn Functions/Storage Rules và dependency backend.
+- `mm/pubspec.yaml`, `mm/pubspec.lock`: thêm Firebase Storage, Cloud Functions, file picker và URL launcher.
+
+### Trạng thái xác minh, giới hạn còn lại
+
+- `npx supabase link --project-ref fzzsffkeajsqjjaljojk` thành công. Sau xác nhận project dev/test và migration chưa chạy, `supabase db push --linked` đã áp dụng migration `20261013223000`; `supabase migration list --linked` xác nhận lịch sử local/remote khớp. Read-only query xác nhận ba bảng, bốn RPC và 11 RLS policies tồn tại. Chưa xác minh provider Firebase Third-Party Auth/claim `sub` trong Supabase.
+- Firebase Android app `1:644994258114:android:b237d407e2e7596ecbd75b` đã được đăng ký trong project `document-management-ecf5c` cho `com.example.mm`; CLI tải `android/app/google-services.json`, và debug SHA-1/SHA-256 đã đăng ký. Google provider vẫn chưa được bật; iOS/Web không được cấu hình. App có thể khởi động Android nhưng sign-in thật chưa xác minh.
+- Firebase CLI xác nhận Storage service chưa được setup trên project; chưa có bucket khả dụng để deploy Rules. Người dùng đã chọn `asia-southeast1` (Singapore), nhưng việc khởi tạo bucket trong Firebase Console vẫn đang chờ. Storage Rules/Callable Function chưa được deploy.
+- Storage deploy dry-run dừng với `Firebase Storage has not been set up`; CLI đã bật Storage API nhưng không tạo bucket hay thay Storage Rules. Firebase Console hiện báo Storage cần Blaze billing và nút Upgrade project; chưa thực hiện upgrade.
+- `flutter test`: 18 passed. `flutter analyze`: không còn error; còn 4 issue có sẵn ngoài phần cloud (1 info trong `document_dao.dart`, 3 unused-import warnings ở widgets/tests).
+- Android debug APK build thành công sau khi thêm packages; Gradle đưa ra cảnh báo plugin Firebase đang dùng Kotlin Gradle Plugin theo cơ chế cũ, không phải lỗi build. Chưa khởi chạy APK do thiếu Firebase app config.
+- TypeScript Cloud Function đã qua `npx tsc --noEmit`; không có test runtime/backend hoặc deploy.
+- Không có test bằng ba tài khoản độc lập. RLS, Firebase Storage Rules, direct-object denial, share/revoke, signed URL, migration và token bridge đều **chưa xác minh runtime**.
+- Migration initial hiện đã được ghi nhận trên remote; không chạy lại thủ công. Các thay đổi schema về sau phải được tạo thành migration mới.
+- Upload dùng memory buffer và giới hạn 20 MB; file MIME do client khai báo không thay thế kiểm tra virus/nội dung. Khi xóa metadata thành công nhưng Firebase Storage delete thất bại, lỗi được báo và có thể còn object cần dọn.
+- Tải file mở bằng signed URL trong ứng dụng ngoài; người nhận có thể chuyển tiếp URL trong thời hạn 5 phút. Muốn ngăn chia sẻ lại tuyệt đối cần proxy stream thay cho signed URL.
+
+### Kết luận checklist hiện tại
+
+Mã ứng dụng, schema/RLS draft, Storage Rules và backend authorization flow đã được bổ sung, nhưng checklist **chưa hoàn tất ở mức cloud vận hành** cho tới khi cấu hình Firebase thật, bật và xác minh Supabase Firebase provider, áp dụng migration phù hợp với lịch sử remote, deploy Rules/Function và chạy ma trận ba tài khoản có bằng chứng.
+
+## 13. Cập nhật kiến trúc theo quyết định người dùng — 2026-10-13
+
+Người dùng quyết định loại Firebase Storage khỏi giải pháp do yêu cầu billing.
+Kiến trúc mục tiêu hiện tại là Firebase Authentication + Supabase PostgreSQL +
+Supabase Storage private. Mục này thay thế các đề xuất Firebase Storage ở
+phần lịch sử phía trên.
+
+### Trạng thái mã nguồn mới nhất
+
+- `mm/lib/services/supabase_storage_service.dart` là lớp lưu trữ file mới:
+  bucket private `documents`, giới hạn 20 MiB, MIME allowlist, object path
+  `<uid>/<document-uuid>/<timestamp>_<filename>`, URL tải ký hạn 60 giây.
+- `mm/lib/services/cloud_document_service.dart` đã được chuyển từ Firebase
+  Storage/Callable Function sang Supabase Storage. Upload/replace dùng object
+  mới trước khi đổi metadata; lỗi dọn file được báo rõ, không trả về success.
+- `mm/supabase/migrations/20261013233500_supabase_private_document_storage.sql`
+  thêm bucket và policies owner/viewer/editor; đã apply vào linked dev/test.
+- Đã xóa Firebase Storage/Functions SDK usages, `mm/storage.rules`,
+  `mm/firebase.json` và source/manifest/lockfile của Functions.
+- Firebase Auth, Google Sign-In, Android `google-services.json`, `.firebaserc`,
+  Supabase project URL/publishable key vẫn được giữ.
+- `mm/test/supabase_storage_service_test.dart` bổ sung unit tests cho path,
+  MIME, giới hạn kích thước và path segments; cả 3 tests mới đã chạy pass.
+
+### Kiểm chứng cloud chỉ đọc trong lượt này
+
+- `npx supabase migration list --linked`: initial migration `20261013223000`
+  vẫn áp dụng ở remote.
+- Read-only SQL: policies hiện có cho ba bảng `users`, `documents`,
+  `document_permissions`. Trước khi chạy migration mới, bucket `documents` và
+  policies `storage.objects` chưa tồn tại; migration additive đã tạo chúng.
+- Migration Storage được apply vào dev/test; không xóa dữ liệu hay sửa migration
+  ban đầu.
+- Read-only SQL sau migration xác nhận bucket private `documents`, limit 20 MiB,
+  MIME allowlist, bốn Storage policies và migration version
+  `20261013233500`.
+- Supabase Firebase Third-Party Auth/JWT mapping, Google provider runtime,
+  Android sign-in, Storage operations và test A/B/C vẫn chưa xác minh.
+- `flutter pub get`: pass sau khi xóa dependency Firebase Storage/Functions.
+- `flutter test`: 21 tests passed (18 existing + 3 new storage helper tests).
+- `flutter analyze`: exit code 1 do 4 issue ngoài file mới/sửa (1 info trong
+  `document_dao.dart`, unused imports trong `document_card.dart`,
+  `database_test.dart` và `document_dao_test.dart`).
+- `flutter build apk --debug`: pass; còn warning KGP từ plugin Firebase Auth.
+- Functions/backend test không áp dụng vì toàn bộ Callable Function đã bỏ.
+
+### Rủi ro còn lại
+
+Firebase ID token callback có trong `main.dart`, nhưng cấu hình Supabase
+Third-Party Auth và claim `sub` cần Dashboard + token thật. `ensureProfile`
+được dùng làm cổng trước truy vấn tài liệu; nếu server không chấp nhận token,
+UI chỉ nên báo lỗi và không tải dữ liệu. Supabase Storage object và PostgreSQL
+metadata không transactional; process termination có thể để lại private orphan
+object cần đối soát. Signed URL là bearer credential tới khi hết hạn 60 giây.
+
+### Bổ sung audit identity/runtime
+
+- Firebase ID token mặc định không có `role: authenticated`. Tài liệu Supabase
+  Third-Party Auth yêu cầu claim này để dùng PostgreSQL role `authenticated`;
+  hiện schema chỉ grant protected operations cho role đó. Vì vậy Google
+  sign-in/token callback trong mã không đủ chứng minh profile upsert có thể
+  chạy. Cần một trusted Firebase-side claim issuer; chưa có issuer trong repo.
+- `mm/android/app/google-services.json` hiện có Android OAuth client và web
+  client entries, nhưng file này không chứng minh Firebase Google provider
+  đã bật hay sign-in đã chạy thành công. `mm/google-services.json` là bản
+  cấu hình bổ sung ngoài vị trí Android Gradle chuẩn và không được runtime
+  Android tự đọc.
+- Đã phát hiện và sửa rủi ro reuse `SignedInPage` khi Firebase UID đổi: danh
+  sách cũ/profile-ready được reset, và kết quả async cũ bị bỏ qua theo
+  generation/UID. Unit tests cho capability owner/editor/viewer không phải
+  kiểm thử enforcement của RLS.
+- OAuth thật, role claim, token claims, thao tác cloud và phân quyền A/B/C
+  vẫn chưa xác minh được nếu không có tài khoản và môi trường Firebase/Supabase
+  thực tế. Không được đánh dấu hoàn tất dựa trên cấu hình source hoặc dashboard
+  một mình.
+- Khi chạy emulator Android, Firebase khôi phục một phiên đăng nhập hiện có;
+  upsert hồ sơ vào `users` bị PostgreSQL trả `42501` (RLS violation). App
+  hiển thị trạng thái fail-closed và không tiếp tục gọi tìm kiếm tài liệu.
+  Đây chưa phải kiểm chứng Google OAuth mới hoặc bằng chứng xác định claim
+  nào sai; xem `docs/TEST_RESULTS.md`.

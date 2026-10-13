@@ -265,9 +265,82 @@ begin
 end;
 $$;
 
+create or replace function public.revoke_document_share(
+  p_document_id uuid,
+  p_user_id text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not app_private.is_document_owner(p_document_id) then
+    raise exception 'Only the document owner can manage sharing';
+  end if;
+
+  delete from public.document_permissions
+  where document_id = p_document_id
+    and user_id = p_user_id;
+end;
+$$;
+
+create or replace function public.list_document_shares(p_document_id uuid)
+returns table(user_id text, email text, permission text)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not app_private.is_document_owner(p_document_id) then
+    raise exception 'Only the document owner can manage sharing';
+  end if;
+
+  return query
+  select dp.user_id, u.email, dp.permission
+  from public.document_permissions dp
+  join public.users u on u.id = dp.user_id
+  where dp.document_id = p_document_id
+  order by lower(u.email);
+end;
+$$;
+
+create or replace function public.search_documents(
+  p_query text default null,
+  p_document_type text default null
+)
+returns setof public.documents
+language sql
+stable
+set search_path = ''
+as $$
+  select d.*
+  from public.documents d
+  where (
+    nullif(btrim(p_query), '') is null
+    or d.title ilike '%' || btrim(p_query) || '%'
+    or coalesce(d.description, '') ilike '%' || btrim(p_query) || '%'
+    or coalesce(d.subject, '') ilike '%' || btrim(p_query) || '%'
+  )
+  and (p_document_type is null or d.document_type = p_document_type)
+  order by d.created_at desc;
+$$;
+
 revoke all on function public.share_document_with_email(uuid, text, text)
   from public;
 grant execute on function public.share_document_with_email(uuid, text, text)
+  to authenticated;
+revoke all on function public.revoke_document_share(uuid, text)
+  from public;
+grant execute on function public.revoke_document_share(uuid, text)
+  to authenticated;
+revoke all on function public.list_document_shares(uuid)
+  from public;
+grant execute on function public.list_document_shares(uuid)
+  to authenticated;
+revoke all on function public.search_documents(text, text)
+  from public;
+grant execute on function public.search_documents(text, text)
   to authenticated;
 
 alter table public.users enable row level security;
@@ -359,4 +432,3 @@ grant select, insert, update on public.users to authenticated;
 grant select, insert, update, delete on public.documents to authenticated;
 grant select, insert, update, delete
   on public.document_permissions to authenticated;
-

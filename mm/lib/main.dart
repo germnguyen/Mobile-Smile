@@ -54,6 +54,7 @@ class StudyCashewApp extends StatelessWidget {
 
       home: AuthGate(
         authService: dependencies.authService,
+        cloudDocumentService: dependencies.cloudDocumentService,
       ),
     );
   }
