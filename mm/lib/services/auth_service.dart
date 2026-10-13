@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 abstract interface class GoogleSignInGateway {
@@ -93,6 +94,14 @@ class _FirebaseAuthGateway implements FirebaseAuthGateway {
     final user = result.user;
     if (user == null) {
       throw StateError('Firebase did not return a signed-in user.');
+    }
+    if (user != null) {
+      final token = await user.getIdToken(true);
+      final result = await user.getIdTokenResult();
+
+      debugPrint('Firebase UID: ${user.uid}');
+      debugPrint('Token refreshed: ${token != null}');
+      debugPrint('Firebase claims: ${result.claims}');
     }
     return user;
   }

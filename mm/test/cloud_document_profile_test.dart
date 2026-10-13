@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mm/services/cloud_document_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
@@ -16,7 +15,7 @@ void main() {
         handler: (request) async {
           insertedProfile = jsonDecode(request.body) as Map<String, dynamic>;
           authorization = request.headers['authorization'];
-          return http.Response('', 201, request: request);
+          return Response('', 201);
         },
       );
       addTearDown(client.dispose);
@@ -29,33 +28,36 @@ void main() {
 
       expect(insertedProfile?['id'], 'firebase-uid-a');
       expect(insertedProfile?['email'], 'user@example.test');
-      expect(authorization, startsWith('Bearer '));
+      expect(authorization, 'Bearer firebase-token-test-fixture');
     });
 
-    test('rejects a profile user that differs from the active Firebase UID', () async {
-      var requestSent = false;
-      final client = _client(
-        handler: (request) async {
-          requestSent = true;
-          return http.Response('', 201, request: request);
-        },
-      );
-      addTearDown(client.dispose);
-      final service = CloudDocumentService(
-        client: client,
-        currentUserId: () => 'firebase-uid-a',
-      );
+    test(
+      'rejects a profile user that differs from the active Firebase UID',
+      () async {
+        var requestSent = false;
+        final client = _client(
+          handler: (request) async {
+            requestSent = true;
+            return Response('', 201);
+          },
+        );
+        addTearDown(client.dispose);
+        final service = CloudDocumentService(
+          client: client,
+          currentUserId: () => 'firebase-uid-a',
+        );
 
-      await expectLater(
-        service.ensureProfile(_user('firebase-uid-b')),
-        throwsA(isA<StateError>()),
-      );
-      expect(requestSent, isFalse);
-    });
+        await expectLater(
+          service.ensureProfile(_user('firebase-uid-b')),
+          throwsA(isA<StateError>()),
+        );
+        expect(requestSent, isFalse);
+      },
+    );
 
     test('surfaces the server RLS denial without falling back', () async {
       final client = _client(
-        handler: (request) async => http.Response(
+        handler: (request) async => Response(
           jsonEncode({
             'code': '42501',
             'message':
@@ -65,7 +67,6 @@ void main() {
           }),
           403,
           headers: {'content-type': 'application/json'},
-          request: request,
         ),
       );
       addTearDown(client.dispose);
@@ -89,7 +90,7 @@ void main() {
 }
 
 SupabaseClient _client({
-  required Future<http.Response> Function(http.Request request) handler,
+  required Future<Response> Function(BaseRequest request) handler,
 }) => SupabaseClient(
   'https://example.supabase.co',
   'test-publishable-key',

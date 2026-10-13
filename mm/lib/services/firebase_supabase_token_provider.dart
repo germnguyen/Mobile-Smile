@@ -18,7 +18,7 @@ class FirebaseTokenSnapshot {
 }
 
 abstract interface class FirebaseTokenSource {
-  Future<FirebaseTokenSnapshot?> currentToken();
+  Future<FirebaseTokenSnapshot?> currentToken({bool forceRefresh = false});
 }
 
 class FirebaseSupabaseTokenProvider {
@@ -41,8 +41,16 @@ class FirebaseSupabaseTokenProvider {
   final DateTime Function() _now;
 
   Future<String?> call() async {
-    final snapshot = await source.currentToken();
+    var snapshot = await source.currentToken();
     if (snapshot == null) return null;
+
+    if (snapshot.claims['role'] != 'authenticated') {
+      final refreshedSnapshot = await source.currentToken(forceRefresh: true);
+      if (refreshedSnapshot == null || refreshedSnapshot.uid != snapshot.uid) {
+        throw StateError('Firebase account changed while refreshing its token.');
+      }
+      snapshot = refreshedSnapshot;
+    }
 
     final token = snapshot.token;
     if (token == null || token.isEmpty) {
@@ -78,7 +86,9 @@ class _FirebaseTokenSource implements FirebaseTokenSource {
   final FirebaseApp _app;
 
   @override
-  Future<FirebaseTokenSnapshot?> currentToken() async {
+  Future<FirebaseTokenSnapshot?> currentToken({
+    bool forceRefresh = false,
+  }) async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
@@ -86,7 +96,7 @@ class _FirebaseTokenSource implements FirebaseTokenSource {
     if (projectId.isEmpty) {
       throw StateError('Firebase project ID is not configured.');
     }
-    final tokenResult = await user.getIdTokenResult();
+    final tokenResult = await user.getIdTokenResult(forceRefresh);
     if (_auth.currentUser?.uid != user.uid) {
       throw StateError('Firebase account changed while obtaining its token.');
     }

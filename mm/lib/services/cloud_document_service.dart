@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../models/cloud_document.dart';
@@ -348,6 +349,10 @@ class CloudDocumentService {
 
   String _requireCurrentUserId() {
     final userId = _currentUserId();
+    debugPrint('[DEBUG] owner_id gửi lên: $userId');
+    debugPrint(
+      '[DEBUG] Firebase UID: ${FirebaseAuth.instance.currentUser?.uid}',
+    );
     if (userId == null) throw StateError('Bạn cần đăng nhập lại.');
     return userId;
   }

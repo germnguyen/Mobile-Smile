@@ -5,14 +5,17 @@ void main() {
   group('FirebaseSupabaseTokenProvider', () {
     final fixedNow = DateTime.utc(2026, 10, 14);
 
-    test('returns the unchanged Firebase ID token when required claims match', () async {
-      final provider = FirebaseSupabaseTokenProvider(
-        source: _FakeTokenSource(_snapshot()),
-        now: () => fixedNow,
-      );
+    test(
+      'returns the unchanged Firebase ID token when required claims match',
+      () async {
+        final provider = FirebaseSupabaseTokenProvider(
+          source: _FakeTokenSource(_snapshot()),
+          now: () => fixedNow,
+        );
 
-      expect(await provider(), 'firebase-id-token-test-fixture');
-    });
+        expect(await provider(), 'firebase-id-token-test-fixture');
+      },
+    );
 
     test('returns null when no Firebase user is signed in', () async {
       final provider = FirebaseSupabaseTokenProvider(
@@ -26,8 +29,13 @@ void main() {
     test('rejects a token missing the trusted authenticated role', () async {
       final provider = FirebaseSupabaseTokenProvider(
         source: _FakeTokenSource(
-          _snapshot(claims: {'sub': 'uid-a', 'aud': 'firebase-project-a',
-            'iss': 'https://securetoken.google.com/firebase-project-a'}),
+          _snapshot(
+            claims: {
+              'sub': 'uid-a',
+              'aud': 'firebase-project-a',
+              'iss': 'https://securetoken.google.com/firebase-project-a',
+            },
+          ),
         ),
         now: () => fixedNow,
       );
@@ -43,6 +51,29 @@ void main() {
         ),
       );
     });
+
+    test(
+      'force refreshes once to receive a server-issued role claim',
+      () async {
+        final source = _SequenceTokenSource([
+          _snapshot(
+            claims: {
+              'sub': 'uid-a',
+              'aud': 'firebase-project-a',
+              'iss': 'https://securetoken.google.com/firebase-project-a',
+            },
+          ),
+          _snapshot(),
+        ]);
+        final provider = FirebaseSupabaseTokenProvider(
+          source: source,
+          now: () => fixedNow,
+        );
+
+        expect(await provider(), 'firebase-id-token-test-fixture');
+        expect(source.forceRefreshCalls, [false, true]);
+      },
+    );
 
     test('rejects subject, issuer, audience, and expiry mismatches', () async {
       final invalidSnapshots = [
@@ -87,5 +118,26 @@ class _FakeTokenSource implements FirebaseTokenSource {
   final FirebaseTokenSnapshot? snapshot;
 
   @override
-  Future<FirebaseTokenSnapshot?> currentToken() async => snapshot;
+  Future<FirebaseTokenSnapshot?> currentToken({
+    bool forceRefresh = false,
+  }) async => snapshot;
+}
+
+class _SequenceTokenSource implements FirebaseTokenSource {
+  _SequenceTokenSource(this.snapshots);
+
+  final List<FirebaseTokenSnapshot?> snapshots;
+  final List<bool> forceRefreshCalls = [];
+  var _nextIndex = 0;
+
+  @override
+  Future<FirebaseTokenSnapshot?> currentToken({
+    bool forceRefresh = false,
+  }) async {
+    forceRefreshCalls.add(forceRefresh);
+    final index = _nextIndex < snapshots.length
+        ? _nextIndex++
+        : snapshots.length - 1;
+    return snapshots[index];
+  }
 }
