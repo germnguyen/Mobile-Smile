@@ -88,8 +88,8 @@ class _SignedInPageState extends State<SignedInPage> {
         _isLoading = false;
         _error = _profileReady
             ? 'Không thể tải dữ liệu đám mây: $error'
-            : 'Không thể đồng bộ hồ sơ với quyền hiện tại; Supabase đã từ chối '
-                  'yêu cầu. Dữ liệu đám mây vẫn bị khóa. Chi tiết: $error';
+            : 'Không thể xác nhận danh tính hoặc đồng bộ hồ sơ. Dữ liệu đám '
+                  'mây vẫn bị khóa. Chi tiết: $error';
       });
     }
   }

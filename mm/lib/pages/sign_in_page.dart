@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
@@ -36,9 +37,18 @@ class _SignInPageState extends State<SignInPage> {
 
       setState(() {
         _isSigningIn = false;
-        _errorMessage = 'Đăng nhập thất bại: $error';
+        _errorMessage = _signInErrorMessage(error);
       });
     }
+  }
+
+  String _signInErrorMessage(Object error) {
+    if (error is FirebaseAuthException &&
+        error.code == 'network-request-failed') {
+      return 'Không thể kết nối. Kiểm tra mạng rồi thử lại.';
+    }
+    return 'Đăng nhập Google/Firebase thất bại. '
+        'Kiểm tra cấu hình OAuth và thử lại.';
   }
 
   @override

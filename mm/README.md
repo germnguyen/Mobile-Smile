@@ -638,6 +638,79 @@ flutter pub get
 
 ---
 
+# Firebase Google Sign-In and Supabase
+
+## Packages and flow
+
+The current lockfile resolves `google_sign_in 7.2.0`, `firebase_auth 6.7.0`,
+`firebase_core 4.15.0`, and `supabase_flutter 2.18.3`. Google Sign-In uses the
+v7 `GoogleSignIn.instance.authenticate()` API. Its Google ID token is passed to
+`GoogleAuthProvider.credential(idToken: ...)`; Firebase Authentication then
+establishes the Firebase user session. Supabase receives only the Firebase ID
+token through `FirebaseSupabaseTokenProvider`; a Google access token is never
+used as the Supabase bearer token.
+
+The callback performs a local fail-closed preflight for Firebase token claims:
+`sub` must match the current Firebase UID, `aud`/`iss` must match the configured
+Firebase project, the token must not be expired, and the trusted custom claim
+`role` must equal `authenticated`. This client-side parsing is diagnostic
+preflight only; it cannot verify the JWT signature or grant permissions.
+Supabase must verify the Firebase Third-Party Auth provider and enforce
+PostgreSQL RLS on the server.
+
+## Console setup required
+
+1. In Firebase Console, register Android package `com.example.mm`, enable
+   Google in Authentication providers, and configure the web OAuth client.
+   `android/app/google-services.json` must contain an OAuth `client_type: 3`
+   web client. Add the SHA-1/SHA-256 signing fingerprints for each build
+   configuration and download the updated JSON to `android/app/`.
+2. In Supabase Dashboard → Authentication → Third-Party Auth, add Firebase
+   with the Firebase project ID matching the Android `google-services.json`.
+3. Firebase ID tokens do not normally include `role: authenticated`. Configure
+   a trusted server-side issuer before expecting the current Supabase grants to
+   succeed. Options include Firebase Authentication blocking functions (require
+   Identity Platform) or a trusted Firebase Admin SDK service that assigns
+   custom claims and refreshes existing sessions. Never put service-account
+   credentials/Admin SDK secrets in Flutter, the repository, or a client build.
+   For an asynchronous Auth create trigger, the first sign-in may occur before
+   the trigger sets the claim; force-refresh or sign in again after the server
+   confirms the claim update.
+4. Check the real Firebase ID token's `sub`, `aud`, `iss`, expiration, and
+   `role` in a trusted diagnostic environment without recording or sharing the
+   token. Supabase must independently validate signature, issuer, audience and
+   expiration.
+
+## Local configuration and run
+
+Firebase Android configuration is read by the Google Services Gradle plugin.
+The Supabase URL and publishable client key are configured in
+`lib/main.dart`; the publishable key is intended for client use and is not a
+service-role/secret key. Do not put a Supabase secret/service-role key or
+Firebase Admin credential in `--dart-define` or any Flutter build.
+
+```powershell
+flutter pub get
+flutter emulators --launch Pixel_8_2
+flutter run
+```
+
+After Google sign-in, a profile upsert must pass `users_insert_self` before the
+app queries documents. The migration also checks `id == auth.jwt()->>'sub'`
+and profile email equals the token email. A PostgreSQL `42501` error is
+fail-closed: do not remove RLS or add broad `anon` grants. Diagnose role,
+project provider, subject, and email claims first.
+
+Current cloud verification is incomplete. An Android emulator restored a
+Firebase session, but the profile upsert was denied by RLS; this is not proof
+that OAuth or the Firebase Third-Party Auth integration is configured
+correctly. See [`../docs/CLOUD_SETUP.md`](../docs/CLOUD_SETUP.md) and
+[`../docs/TEST_RESULTS.md`](../docs/TEST_RESULTS.md) before claiming cloud sync
+works. The app currently has Google sign-in only; no email/password flow was
+found in the source.
+
+---
+
 ## Generate Drift code
 
 ```bash

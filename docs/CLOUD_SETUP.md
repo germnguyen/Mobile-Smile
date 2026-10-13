@@ -34,11 +34,18 @@ publishable key are client configuration, not server secrets.
 
 ## Supabase identity bridge
 
-The client supplies the current Firebase ID token through Supabase Flutter's
-`accessToken` callback. On the Supabase project, enable/configure Firebase as a
-Third-Party Auth provider and confirm the provider project/audience matches the
-Firebase project. The database policies expect the provider-verified JWT claim
-`sub` to equal the Firebase UID; the client does not send a trusted UID claim.
+The client supplies the current Firebase ID token through Supabase Flutter
+`2.18.3`'s `accessToken` callback. The callback obtains the token via Firebase
+Auth's `getIdTokenResult()` and passes the token string unchanged; it is not the
+Google access token. The client preflights the Firebase SDK's parsed `sub`,
+`aud`, `iss`, expiration and `role` claims and returns no token if any check
+fails. Firebase documents the decoded claims as untrusted on the client:
+preflight is diagnostic/fail-closed behavior, not signature verification or an
+authorization boundary. Supabase must independently verify the Firebase token.
+On the Supabase project, enable/configure Firebase as a Third-Party Auth
+provider and confirm the provider project/audience matches the Firebase
+project. The database policies expect the provider-verified JWT claim `sub` to
+equal the Firebase UID; the client does not send a trusted UID claim.
 
 **Important role prerequisite:** Firebase ID tokens do not normally contain a
 `role` claim. Supabase maps a token without that claim to the PostgreSQL `anon`
@@ -56,7 +63,10 @@ are not trusted. No such claim issuer is present in this repository.
 subject and token email. Its success is the runtime gate before document search
 is requested. If it is rejected, keep cloud data closed and inspect the
 Supabase Third-Party Auth settings/JWT claims, including `iss`, `aud`, `sub`,
-`exp`, and `role`; do not disable RLS or substitute an unverified UID.
+`exp`, and `role`; the profile policy also requires `users.id == sub` and the
+profile email to match the token email. Do not disable RLS or substitute an
+unverified UID. A `42501` denial alone does not identify which JWT claim,
+grant, provider configuration, or email comparison failed.
 
 ## Create the private Supabase Storage bucket
 

@@ -12,13 +12,17 @@ class CloudDocumentService {
   CloudDocumentService({
     SupabaseClient? client,
     SupabaseStorageService? storage,
+    String? Function()? currentUserId,
   }) : _client = client ?? Supabase.instance.client,
        _storage =
            storage ??
-           SupabaseStorageService(client: client ?? Supabase.instance.client);
+           SupabaseStorageService(client: client ?? Supabase.instance.client),
+       _currentUserId =
+           currentUserId ?? (() => FirebaseAuth.instance.currentUser?.uid);
 
   final SupabaseClient _client;
   final SupabaseStorageService _storage;
+  final String? Function() _currentUserId;
 
   Future<void> ensureProfile(User user) async {
     if (_requireCurrentUserId() != user.uid) {
@@ -343,7 +347,7 @@ class CloudDocumentService {
   }
 
   String _requireCurrentUserId() {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _currentUserId();
     if (userId == null) throw StateError('Bạn cần đăng nhập lại.');
     return userId;
   }

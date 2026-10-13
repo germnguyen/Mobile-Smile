@@ -4,8 +4,13 @@
 
 Firebase Authentication verifies Google sign-in and provides the current
 Firebase ID token. The Flutter Supabase client supplies that token through its
-`accessToken` callback. This code-level bridge is **not proof** that the
-Supabase project is configured to verify the Firebase issuer/audience.
+`accessToken` callback. Before returning it, the client checks Firebase
+`getIdTokenResult()` claims for `sub`, `aud`, `iss`, expiration, and
+`role == authenticated`, then passes the token unchanged. Firebase warns that
+client-decoded claims are untrusted. These checks are a local fail-closed
+preflight only, not signature verification or an authorization boundary; this
+code-level bridge is **not proof** that Supabase is configured to verify the
+Firebase issuer/audience.
 
 The database policies read `sub` from the provider-verified JWT and expect it
 to match the Firebase UID. The app must successfully upsert its own `users`
@@ -32,6 +37,11 @@ than weakening the RLS role boundary.
 If this provider cannot be enabled or verified, protected operations must
 remain blocked until a trusted backend/Edge Function verifies the Firebase
 signature, issuer, audience, expiration, and subject.
+
+No token values are logged or committed. Unit tests exercise claim validation
+using fake claims and Supabase profile denial using a mocked HTTP response;
+neither test verifies a real Firebase signature, Supabase provider setup, or
+hosted RLS behavior.
 
 ## Authorization matrix
 
@@ -71,10 +81,15 @@ URL already issued.
 ## Verification status
 
 RLS definitions exist in both applied migrations, and read-only queries confirm
-the bucket is private and the four storage policies exist. Real Firebase-token
-and cross-account enforcement remains unverified. On the Android emulator an
+the bucket is private and the four storage policies exist. In the latest local
+test run, 35/35 tests pass and the Android debug APK builds. The analyzer still
+reports four pre-existing findings. Real Firebase-token and cross-account
+enforcement remains unverified. On the earlier Android emulator run an
 existing Firebase session was restored, but the `users` profile upsert received
 a PostgreSQL `42501` RLS denial; the app correctly did not continue to
-document search. This confirms the fail-closed UI path, not the token's
-claims/provider configuration. Do not mark security complete until a trusted
-role issuer is configured and A/B/C tests pass.
+document search. A later updated build launched successfully on the emulator
+and displayed the Google sign-in page without runtime errors, but no fresh
+OAuth interaction or cloud operation was performed. The observed denial
+confirms the earlier fail-closed UI path, not the token's claims/provider
+configuration. Do not mark security complete until a trusted role issuer is
+configured and A/B/C tests pass.
