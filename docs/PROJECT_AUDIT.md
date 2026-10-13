@@ -177,3 +177,24 @@ Sau khi người dùng chọn hướng Firebase Authentication (Google) kết h�
 Đây chỉ là khởi tạo SDK/client. **Chưa** có Firebase Authentication/Google Sign-In, chưa truyền Firebase ID token vào Supabase, chưa xác minh cấu hình Third-Party Auth/claims trên Supabase project và chưa gọi bảng Todos hay dữ liệu cloud nào. Vì vậy Supabase chưa được xem là đã xác thực người dùng và không được dùng để truy cập dữ liệu cần bảo vệ trước khi hoàn thành gate identity.
 
 Sau thay đổi, `flutter test` vẫn đạt 18/18; `flutter analyze` vẫn có 7 issue (1 info, 6 warning), bằng số lượng baseline lúc audit. Build nền tảng và xác minh kết nối dashboard chưa chạy.
+
+## 11. Tiến độ tích hợp Firebase Auth (đang triển khai)
+
+Người dùng cung cấp phạm vi yêu cầu: Google Sign-In qua Firebase Authentication để xác thực và lấy Firebase UID; Firebase Storage chứa tệp; Supabase giữ users/documents/permissions; tìm kiếm/cập nhật/chia sẻ; RLS; kiểm thử tối thiểu ba tài khoản. Cũng đã chọn khảo sát Firebase Third-Party Auth của Supabase làm identity bridge.
+
+Đã thêm `firebase_core ^4.15.0`, `firebase_auth ^6.7.0`, `google_sign_in ^7.2.0`; lockfile resolve lần lượt 4.15.0, 6.7.0, 7.2.0. Mã mới:
+
+- `mm/lib/services/auth_service.dart`: Google Sign-In → Google ID token → Firebase credential; hỗ trợ hủy và Firebase Auth stream/logout.
+- `mm/lib/pages/sign_in_page.dart`: giao diện đăng nhập, loading và hiển thị lỗi.
+- `mm/lib/pages/auth_gate.dart`: chờ/khôi phục Firebase auth state và định tuyến trạng thái đăng nhập.
+- `mm/lib/pages/signed_in_page.dart`: trang tạm cho user đã đăng nhập, hiển thị trạng thái chưa kết nối cloud và logout.
+- `mm/lib/main.dart`: khởi tạo Firebase và Google Sign-In trước Supabase; Supabase `accessToken` callback lấy Firebase ID token hiện hành.
+- `mm/lib/config/app_dependencies.dart`: đăng ký AuthService theo pattern dependency composition hiện hữu.
+
+**Giới hạn/bảo vệ dữ liệu:** do Supabase chưa có schema/RLS và Drift hiện không gắn owner UID, AuthGate chủ động không hiển thị danh sách SQLite cục bộ cho user đăng nhập. Đây là trạng thái tạm thời để tránh tài liệu của một tài khoản bị thấy bởi tài khoản khác; không có fallback dữ liệu không xác thực.
+
+**Chặn cấu hình runtime:** không tìm thấy `google-services.json`, `GoogleService-Info.plist` hoặc `firebase_options.dart`. `Firebase.initializeApp()` Android chưa thể chạy thành công cho tới khi Firebase project thật được cấu hình. Google Sign-In còn cần OAuth client/provider tương ứng. Không tạo file cấu hình giả và chưa chỉnh Gradle/plugin native vì thiếu Firebase project config thật.
+
+**Tích hợp Supabase:** SDK `supabase_flutter 2.18.3` có callback `accessToken` dùng cho third-party auth; app hiện trả Firebase `getIdToken()` ở đó. Cấu hình provider trong Supabase Dashboard, claims/token thật, JWT verification và policy UID mapping chưa được xác minh. Không có truy vấn Postgres nào được triển khai ở bước này.
+
+**Kiểm tra:** sau khi thêm Auth, Problems tool báo không có compile errors trong các file Auth được kiểm tra và `flutter test` đạt 18/18. `flutter analyze` còn 6 issue (1 info, 5 warning; giảm một warning do bỏ import thừa trong file đã sửa). Android APK debug build thành công và được cài lên Pixel_8_2, nhưng app dừng ngay khi khởi tạo Firebase: `Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly.` Thiết bị/emulator hoạt động, nhưng runtime Firebase chưa cấu hình. `flutter run` vì vậy không đạt trạng thái sẵn sàng sử dụng. Chưa chạy đăng nhập trên thiết bị, cloud calls, RLS/Storage test hoặc test ba tài khoản.

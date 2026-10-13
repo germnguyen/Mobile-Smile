@@ -1,16 +1,24 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'config/app_dependencies.dart';
 import 'config/app_theme.dart';
-import 'pages/document_list_page.dart';
+import 'pages/auth_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await Firebase.initializeApp();
+  await GoogleSignIn.instance.initialize();
+
   await Supabase.initialize(
     url: 'https://fzzsffkeajsqjjaljojk.supabase.co',
     publishableKey: 'sb_publishable_FCP9pJuNh6MlQX0HXFVGNw_5QnzQpvQ',
+    accessToken: () async =>
+        FirebaseAuth.instance.currentUser?.getIdToken(),
   );
 
   final dependencies =
@@ -44,8 +52,8 @@ class StudyCashewApp extends StatelessWidget {
 
       themeMode: ThemeMode.system,
 
-      home: DocumentListPage(
-        service: dependencies.documentService,
+      home: AuthGate(
+        authService: dependencies.authService,
       ),
     );
   }

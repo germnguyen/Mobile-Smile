@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mm/database/app_database.dart';
 
-import '../database/tables.dart';
 import '../services/document_service.dart';
 import '../struct/document_type.dart';
 import '../widgets/document_card.dart';
