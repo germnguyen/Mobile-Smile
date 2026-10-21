@@ -1,3 +1,0 @@
-Daily You v2.2.0 has arrived! Here are the changes:
-
-• Added Templates! (Manage, create, and edit templates for your logs)

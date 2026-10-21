@@ -1,3 +1,0 @@
-Daily You patch v1.5.1 has arrived! Here are the fixes:
-
-• Fixed Log Today button not dismissing

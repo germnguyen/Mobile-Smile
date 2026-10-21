@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FirebaseTokenSnapshot {
   const FirebaseTokenSnapshot({
@@ -40,43 +42,53 @@ class FirebaseSupabaseTokenProvider {
   final FirebaseTokenSource source;
   final DateTime Function() _now;
 
-  Future<String?> call() async {
-    var snapshot = await source.currentToken();
-    if (snapshot == null) return null;
+Future<String?> call() async {
+  final user = FirebaseAuth.instance.currentUser;
 
-    if (snapshot.claims['role'] != 'authenticated') {
-      final refreshedSnapshot = await source.currentToken(forceRefresh: true);
-      if (refreshedSnapshot == null || refreshedSnapshot.uid != snapshot.uid) {
-        throw StateError('Firebase account changed while refreshing its token.');
-      }
-      snapshot = refreshedSnapshot;
-    }
+  if (user != null) {
+    final result = await user.getIdTokenResult(true);
+    final claims = result.claims ?? {};
 
-    final token = snapshot.token;
-    if (token == null || token.isEmpty) {
-      throw StateError('Firebase did not provide an ID token.');
-    }
-
-    if (snapshot.claims['sub'] != snapshot.uid) {
-      throw StateError('Firebase ID token subject does not match the user.');
-    }
-    if (snapshot.claims['aud'] != snapshot.projectId ||
-        snapshot.claims['iss'] !=
-            'https://securetoken.google.com/${snapshot.projectId}') {
-      throw StateError('Firebase ID token issuer or audience is unexpected.');
-    }
-    if (!snapshot.expirationTime.isAfter(_now())) {
-      throw StateError('Firebase ID token has expired.');
-    }
-    if (snapshot.claims['role'] != 'authenticated') {
-      throw StateError(
-        'Firebase ID token is missing the trusted authenticated role claim. '
-        'Configure a server-side Firebase custom-claims issuer.',
-      );
-    }
-
-    return token;
+    debugPrint('[AUTH] UID: ${user.uid}');
+    debugPrint('[AUTH] role: ${claims['role']}');
+    debugPrint('[AUTH] sub: ${claims['sub']}');
+    debugPrint('[AUTH] aud: ${claims['aud']}');
   }
+  final snapshot = await source.currentToken();
+
+  if (snapshot == null) return null;
+
+  final token = snapshot.token;
+
+  if (token == null || token.isEmpty) {
+    throw StateError('Firebase did not provide an ID token.');
+  }
+
+  if (snapshot.claims['sub'] != snapshot.uid) {
+    throw StateError(
+      'Firebase ID token subject does not match the user.',
+    );
+  }
+
+  if (snapshot.claims['aud'] != snapshot.projectId ||
+      snapshot.claims['iss'] !=
+          'https://securetoken.google.com/${snapshot.projectId}') {
+    throw StateError(
+      'Firebase ID token issuer or audience is unexpected.',
+    );
+  }
+
+  if (!snapshot.expirationTime.isAfter(_now())) {
+    throw StateError('Firebase ID token has expired.');
+  }
+    final response = await Supabase.instance.client
+      .rpc('debug_auth_context');
+
+  debugPrint('[SUPABASE AUTH] $response');
+  return token;
+  }
+
+
 }
 
 class _FirebaseTokenSource implements FirebaseTokenSource {

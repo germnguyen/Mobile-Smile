@@ -1,4 +1,0 @@
-Daily You v2.26.3 has arrived! Fix up:
-
-• Fixed template editor
-• Updated translations
