@@ -1,30 +1,39 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:discipline_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('DisciplineApp integrated navigation and screen switching', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.pumpWidget(const DisciplineApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify initial screen: Habit list
+    expect(find.text('Kỷ Luật Bản Thân'), findsOneWidget);
+    expect(find.text('Chưa có thói quen nào'), findsOneWidget);
+
+    // Switch to Statistics tab
+    await tester.tap(find.text('Thống kê'));
+    await tester.pumpAndSettle();
+
+    // Verify statistics screen
+    expect(find.text('Thống Kê Kỷ Luật'), findsOneWidget);
+    expect(find.text('Theo Ngày'), findsOneWidget);
+
+    // Switch back to Habits tab
+    await tester.tap(find.text('Thói quen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Kỷ Luật Bản Thân'), findsOneWidget);
+
+    // Tap Floating Action Button to open Add Habit screen
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Thêm Thói Quen Mới'), findsOneWidget);
+    expect(find.text('Tên thói quen *'), findsOneWidget);
   });
 }
