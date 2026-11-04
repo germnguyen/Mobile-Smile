@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:discipline_app/models/habit.dart';
-import 'package:discipline_app/models/habit_log.dart';
 import 'package:discipline_app/providers/habit_provider.dart';
 import 'package:discipline_app/services/storage_service.dart';
 

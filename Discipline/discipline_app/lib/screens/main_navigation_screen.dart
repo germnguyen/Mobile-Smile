@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/habit.dart';
 import '../theme/app_theme.dart';
+import 'habit_form_screen.dart';
+import 'habit_list_screen.dart';
+import 'statistics_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -11,15 +15,28 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
+  void _openHabitForm([Habit? habit]) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => HabitFormScreen(habit: habit),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      HabitListScreen(
+        onAddHabit: () => _openHabitForm(),
+        onEditHabit: (habit) => _openHabitForm(habit),
+      ),
+      const StatisticsScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: const [
-          Center(child: Text('Danh sách thói quen (Đang khởi tạo)')),
-          Center(child: Text('Thống kê tiến độ (Đang khởi tạo)')),
-        ],
+        children: screens,
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -35,7 +52,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             });
           },
           backgroundColor: Colors.white,
-          indicatorColor: AppTheme.primaryColor.withOpacity(0.15),
+          indicatorColor: AppTheme.primaryColor.withValues(alpha: 0.15),
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.check_circle_outline, color: AppTheme.textSecondary),

@@ -70,7 +70,7 @@ class TodaySummaryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -85,7 +85,7 @@ class TodaySummaryCard extends StatelessWidget {
                 Text(
                   _formatDateVietnamese(selectedDate),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -103,7 +103,7 @@ class TodaySummaryCard extends StatelessWidget {
                 Text(
                   _getMotivationalMessage(rate, totalCount),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 13,
                     height: 1.3,
                   ),
@@ -122,7 +122,7 @@ class TodaySummaryCard extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: rate,
                   strokeWidth: 6,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               ),

@@ -50,20 +50,20 @@ class DateSelectorStrip extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppTheme.primaryColor
-                      : (isToday ? AppTheme.primaryColor.withOpacity(0.08) : Colors.white),
+                      : (isToday ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.white),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isSelected
                         ? AppTheme.primaryColor
                         : (isToday
-                            ? AppTheme.primaryColor.withOpacity(0.4)
+                            ? AppTheme.primaryColor.withValues(alpha: 0.4)
                             : const Color(0xFFE2E8F0)),
                     width: isToday && !isSelected ? 1.5 : 1.0,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: AppTheme.primaryColor.withOpacity(0.3),
+                            color: AppTheme.primaryColor.withValues(alpha: 0.3),
                             blurRadius: 6,
                             offset: const Offset(0, 3),
                           ),
@@ -79,7 +79,7 @@ class DateSelectorStrip extends StatelessWidget {
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: isSelected
-                            ? Colors.white.withOpacity(0.9)
+                            ? Colors.white.withValues(alpha: 0.9)
                             : AppTheme.textSecondary,
                       ),
                     ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/habit_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/responsive_mobile_wrapper.dart';
@@ -13,16 +15,19 @@ class DisciplineApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Kỷ Luật Cá Nhân',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      builder: (context, child) {
-        return ResponsiveMobileWrapper(
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
-      home: const MainNavigationScreen(),
+    return ChangeNotifierProvider(
+      create: (_) => HabitProvider(),
+      child: MaterialApp(
+        title: 'Kỷ Luật Cá Nhân',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        builder: (context, child) {
+          return ResponsiveMobileWrapper(
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
+        home: const MainNavigationScreen(),
+      ),
     );
   }
 }

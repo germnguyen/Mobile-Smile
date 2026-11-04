@@ -64,7 +64,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       value: '${habits.length}',
                       icon: Icons.checklist,
                       iconColor: AppTheme.primaryColor,
-                      bgColor: AppTheme.primaryColor.withOpacity(0.12),
+                      bgColor: AppTheme.primaryColor.withValues(alpha: 0.12),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -132,7 +132,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -183,19 +183,21 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Tiến độ hôm nay',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat('dd/MM/yyyy').format(today),
-                        style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tiến độ hôm nay',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('dd/MM/yyyy').format(today),
+                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
                   Text(
                     '$percentage%',
@@ -391,7 +393,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -419,7 +421,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         const SizedBox(height: 6),
                         Text(
                           '${monthStat.totalCompletions} lượt hoàn thành trong tháng',
-                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
                         ),
                       ],
                     ),

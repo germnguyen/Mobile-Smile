@@ -97,7 +97,7 @@ class WeeklyBarChart extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isToday ? AppTheme.primaryColor.withOpacity(0.12) : Colors.transparent,
+                        color: isToday ? AppTheme.primaryColor.withValues(alpha: 0.12) : Colors.transparent,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
