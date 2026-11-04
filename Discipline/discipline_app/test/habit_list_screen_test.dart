@@ -58,3 +58,4 @@ void main() {
     expect(provider.isHabitCompletedOn('h1', provider.selectedDate), isTrue);
   });
 }
+

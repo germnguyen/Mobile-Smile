@@ -66,3 +66,4 @@ class StatSummaryCard extends StatelessWidget {
     );
   }
 }
+

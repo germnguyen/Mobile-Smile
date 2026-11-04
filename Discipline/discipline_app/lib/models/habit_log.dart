@@ -39,3 +39,4 @@ class HabitLog {
     return '$y-$m-$d';
   }
 }
+

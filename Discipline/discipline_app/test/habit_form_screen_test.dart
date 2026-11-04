@@ -88,3 +88,4 @@ void main() {
     expect(provider.habits.first.title, 'Dậy lúc 5h30 sáng');
   });
 }
+

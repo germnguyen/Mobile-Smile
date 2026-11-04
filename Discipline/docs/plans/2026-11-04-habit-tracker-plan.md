@@ -175,3 +175,4 @@
 - [ ] Test web build: `flutter build web --release` or verify web bundle generation.
 - [ ] Update `README.md` with features description, screenshots/architecture details, and command instructions (`flutter run -d chrome`).
 - [ ] Final commit: `feat: finalize discipline tracker app with responsive web support`.
+
